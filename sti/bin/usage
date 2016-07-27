@@ -1,0 +1,10 @@
+#!/bin/bash -e
+
+cat <<EOF
+This is the strapdown-lighttpd-s2i S2I image:
+To use it, install S2I: https://github.com/openshift/source-to-image
+Sample invocation:
+sti build https://github.com/openshift/roadshow/ strapdown-lighttpd-s2i roadshow
+You can then run the resulting image via:
+docker run -p 8080:8080 roadshow
+EOF

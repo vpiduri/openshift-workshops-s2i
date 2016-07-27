@@ -1,0 +1,360 @@
+{
+  "kind": "List",
+  "apiVersion": "v1",
+  "metadata": {},
+  "items": [
+    {
+      "kind": "ImageStream",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "openshift-workshops-s2i"
+      },
+      "spec": {
+        "tags": [
+          {
+            "name": "latest",
+            "annotations": {
+              "description": "Openshift Workshops S2I image",
+              "tags": "builder,openshift-workshops",
+              "supports": "strapdown:0.2",
+              "sampleRepo": "https://github.com/jorgemoralespou/openshift-workshops",
+              "version": "1.0"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "BuildConfig",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "openshift-workshops-s2i"
+      },
+      "spec": {
+        "triggers": [
+          {
+            "type": "GitHub",
+            "github": {
+              "secret": "secret101"
+            }
+          },
+          {
+            "type": "Generic",
+            "generic": {
+              "secret": "secret101"
+            }
+          },
+          {
+            "type": "ConfigChange"
+          },
+          {
+            "type": "ImageChange",
+            "imageChange": {}
+          }
+        ],
+        "source": {
+          "type": "Git",
+          "git": {
+            "uri": "https://github.com/jorgemoralespou/openshift-workshops-s2i"
+          },
+          "secrets": []
+        },
+        "strategy": {
+          "type": "Docker",
+          "dockerStrategy": {
+            "from": {
+              "kind": "DockerImage",
+              "name": "openshift/base-centos7:latest"
+            }
+          }
+        },
+        "output": {
+          "to": {
+            "kind": "ImageStreamTag",
+            "name": "openshift-workshops-s2i:latest"
+          }
+        },
+        "resources": {},
+        "postCommit": {}
+      }
+    },
+    {
+      "kind": "Template",
+      "apiVersion": "v1",
+      "metadata": {
+        "name": "openshift-workshop-template",
+        "annotations": {
+          "description": "OpenShfit workshops displayed in Strapdown served by lighttpd server",
+          "tags": "instant-app,openshift-workshop"
+        }
+      },
+      "parameters": [
+        {
+          "description": "The name for the application.",
+          "name": "APP_NAME",
+          "value": "",
+          "displayName": "Application name",
+          "required": true
+        },
+        {
+          "description": "Custom hostname for service routes.  Leave blank for default hostname, e.g.: <application-name>.<project>.<default-domain-suffix>",
+          "name": "APP_HOSTNAME",
+          "displayName": "Application hostname"
+        },
+        {
+          "description": "Git source URI for application",
+          "displayName": "Git URI",
+          "name": "GIT_URI",
+          "value": "https://github.com/jorgemoralespou/openshift-workshops"
+        },
+        {
+          "description": "Git branch/tag reference",
+          "displayName": "Git Reference",
+          "name": "GIT_REF",
+          "value": "master"
+        },
+        {
+          "description": "Git Directory",
+          "displayName": "Context Dir",
+          "name": "CONTEXT_DIR",
+          "value": ""
+        },
+        {
+          "description": "Title for the web site",
+          "displayName": "Title",
+          "name": "TITLE",
+          "value": ""
+        },
+        {
+          "description": "Theme to use for the web site",
+          "displayName": "Theme",
+          "name": "THEME",
+          "value": "openshift"
+        },
+        {
+          "description": "Github trigger secret",
+          "name": "GITHUB_TRIGGER_SECRET",
+          "from": "[a-zA-Z0-9]{8}",
+          "generate": "expression"
+        },
+        {
+          "description": "Generic build trigger secret",
+          "name": "GENERIC_TRIGGER_SECRET",
+          "from": "[a-zA-Z0-9]{8}",
+          "generate": "expression"
+        }
+      ],
+      "objects": [
+        {
+          "kind": "ImageStream",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "${APP_NAME}",
+            "labels": {
+              "app": "${APP_NAME}"
+            }
+          },
+          "spec": {
+            "tags": [
+              {
+                "name": "latest"
+              }
+            ]
+          }
+        },
+        {
+          "kind": "BuildConfig",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "${APP_NAME}",
+            "creationTimestamp": null,
+            "labels": {
+              "app": "${APP_NAME}"
+            }
+          },
+          "spec": {
+            "triggers": [
+              {
+                "type": "GitHub",
+                "github": {
+                  "secret": "${GITHUB_TRIGGER_SECRET}"
+                }
+              },
+              {
+                "type": "Generic",
+                "generic": {
+                  "secret": "${GENERIC_TRIGGER_SECRET}"
+                }
+              },
+              {
+                "type": "ConfigChange"
+              },
+              {
+                "type": "ImageChange",
+                "imageChange": {}
+              }
+            ],
+            "source": {
+              "type": "Git",
+              "git": {
+                "uri": "${GIT_URI}",
+                "ref": "${GIT_REF}"
+              },
+              "contextDir": "${CONTEXT_DIR}",
+              "secrets": []
+            },
+            "strategy": {
+              "type": "Source",
+              "sourceStrategy": {
+                "from": {
+                  "kind": "ImageStreamTag",
+                  "name": "openshift-workshops-s2i:latest"
+                },
+                "env": [
+                  {
+                    "name": "TITLE",
+                    "value": "${TITLE}"
+                  },
+                  {
+                    "name": "THEME",
+                    "value": "${THEME}"
+                  }
+                ]
+              }
+            },
+            "output": {
+              "to": {
+                "kind": "ImageStreamTag",
+                "name": "${APP_NAME}:latest"
+              }
+            },
+            "resources": {},
+            "postCommit": {}
+          }
+        },
+        {
+          "kind": "DeploymentConfig",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "${APP_NAME}",
+            "labels": {
+              "app": "${APP_NAME}"
+            }
+          },
+          "spec": {
+            "strategy": {
+              "type": "Rolling",
+              "rollingParams": {
+                "updatePeriodSeconds": 1,
+                "intervalSeconds": 1,
+                "timeoutSeconds": 600,
+                "maxUnavailable": "25%",
+                "maxSurge": "25%"
+              },
+              "resources": {}
+            },
+            "triggers": [
+              {
+                "type": "ConfigChange"
+              },
+              {
+                "type": "ImageChange",
+                "imageChangeParams": {
+                  "automatic": true,
+                  "containerNames": [
+                    "${APP_NAME}"
+                  ],
+                  "from": {
+                    "kind": "ImageStreamTag",
+                    "name": "${APP_NAME}:latest"
+                  }
+                }
+              }
+            ],
+            "replicas": 1,
+            "test": false,
+            "selector": {
+              "app": "${APP_NAME}",
+              "deploymentconfig": "${APP_NAME}"
+            },
+            "template": {
+              "metadata": {
+                "labels": {
+                  "app": "${APP_NAME}",
+                  "deploymentconfig": "${APP_NAME}"
+                }
+              },
+              "spec": {
+                "containers": [
+                  {
+                    "name": "${APP_NAME}",
+                    "image": "${APP_NAME}",
+                    "ports": [
+                      {
+                        "containerPort": 8080,
+                        "protocol": "TCP"
+                      }
+                    ],
+                    "resources": {},
+                    "terminationMessagePath": "/dev/termination-log",
+                    "imagePullPolicy": "Always"
+                  }
+                ],
+                "restartPolicy": "Always",
+                "terminationGracePeriodSeconds": 30,
+                "dnsPolicy": "ClusterFirst",
+                "securityContext": {}
+              }
+            }
+          }
+        },
+        {
+          "kind": "Service",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "${APP_NAME}",
+            "labels": {
+              "app": "${APP_NAME}"
+            }
+          },
+          "spec": {
+            "ports": [
+              {
+                "name": "8080-tcp",
+                "protocol": "TCP",
+                "port": 8080,
+                "targetPort": 8080
+              }
+            ],
+            "selector": {
+              "app": "${APP_NAME}",
+              "deploymentconfig": "${APP_NAME}"
+            },
+            "type": "ClusterIP",
+            "sessionAffinity": "None"
+          }
+        },
+        {
+          "kind": "Route",
+          "apiVersion": "v1",
+          "metadata": {
+            "name": "${APP_NAME}",
+            "labels": {
+              "app": "${APP_NAME}"
+            }
+          },
+          "spec": {
+            "host": "${APP_HOSTNAME}",
+            "to": {
+              "kind": "Service",
+              "name": "${APP_NAME}"
+            },
+            "port": {
+              "targetPort": "8080-tcp"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

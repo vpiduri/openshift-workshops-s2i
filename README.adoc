@@ -1,0 +1,32 @@
+== OpenShift Workshops S2I for OpenShift - Docker image
+
+This repository contains sample builder image to be used with
+link:https://github.com/openshift/source-to-image[source-to-image] in
+link:https://github.com/openshift/origin/[OpenShift].
+
+This image can be used to create OpenShift Workshops using link:http://strapdownjs.com/[Strapdown] and running on link:https://www.lighttpd.net/[lighttpd]
+
+== Configuration
+This image will use 2 BuildConfig Environment options for customization:
+
+- *TITLE*: The title to provide to the generated site.
+- *THEME*: The theme to use from this link:assets/themes[list of themes]. Or you can provide your own with your source code in the same folder structure (assets/themes) 
+
+== Building and Installing the image and template
+
+----
+oc create -f https://raw.githubusercontent.com/jorgemoralespou/openshift-workshops-s2i/master/ose3/openshift-workshops-s2i-all.json
+----
+
+This will build the s2i builder (openshift-workshops-s2i), and will provide a template (openshift-workshop) for usage.
+
+Once the s2i image has been built, you can use either the s2i builder image directly or using the openshift-workshop template
+
+== Installing the image and template
+The image is also in dockerhub: jorgemoralespou/openshift-workshops-s2i, so you can use it from there with a template:
+
+----
+oc create -f https://raw.githubusercontent.com/jorgemoralespou/strapdown-lighttpd-s2i/master/ose3/openshift-workshops-template.json
+----
+
+This will provide a template (openshift-workshop) for usage.

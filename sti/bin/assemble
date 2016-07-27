@@ -1,0 +1,116 @@
+#!/bin/bash -e
+#
+# S2I assemble script for the 'strapdown-lighttpd-s2i' image.
+# The 'assemble' script builds your application source ready to run.
+#
+# For more information refer to the documentation:
+#   https://github.com/openshift/source-to-image/blob/master/docs/builder_image.md
+#
+
+# Processes an .md file into the template with .html extension
+# Args:
+#   $1: filename
+#   $2: origin_dir
+#   $3: destination_dir
+process () {
+   local _f=$1
+   local _orig=$2
+   local _dest=$3
+
+   local _CONTENT=$(<${_orig}/${_f})
+   # Copy the template with the same name, but .html extension
+   cat > ${_dest}/${_f}.html <<-EOF
+<html>
+<title>${TITLE}</title>
+
+<xmp theme="${THEME}" style="display:none;">
+${_CONTENT}
+</xmp>
+
+<script src="strapdown.js"></script>
+</html>
+EOF
+}
+
+
+CODE_ROOT=/tmp/src
+S2I_BUILD_ROOT=/opt/app-root/src
+MASTER_ROOT=${CODE_ROOT}/openshift-workshops-master
+
+[ ! -e ${CODE_ROOT}/index.md ] && echo "[ERROR] There's no index.md for this workshop" && exit 1
+
+echo "[INFO] Building application into strapdown web"
+# Copy the BASE strapdown.js and themes files into the web-root
+cp -Rf /opt/app-root/assets/* ${S2I_BUILD_ROOT}
+
+# We set a default title in case there's no one defined
+TITLE=${TITLE:-"OpenShift Workshop"}
+THEME=${THEME:-"openshift"}
+
+# Copy user provided sources. Everything else. (images, etc,...)
+# This will have:
+# - openshift-workshop-master/*.md (Master slides)
+# - index.md (This workshop content)
+# - images/logo.png (Logo for the workshop) [OPTIONAL]
+# - images/* (additional images) [OPTIONAL]
+# - assets/themes/<my_strapdown_theme> (Additional themes) [OPTIONAL]
+# - assets/strapdown.css,strapsown.js (Modified version of strapdown) [OPTIONAL]
+
+if [ -d ${CODE_ROOT}/assets ]; then
+   # Copy assets
+   echo "[INFO] Copying customized version of strapdown and themes"
+   cp -Rf ${CODE_ROOT}/assets/* ${S2I_BUILD_ROOT}
+   echo "[INFO] done"
+fi
+
+echo "[INFO] Copying workshop images"
+# Copy down all the images from master
+cp -Rf ${MASTER_ROOT}/images/. ${S2I_BUILD_ROOT}/images/
+# And from workshop
+cp -Rf ${CODE_ROOT}/images/. ${S2I_BUILD_ROOT}/images/
+echo "[INFO] done"
+
+# Copy the code and replace all .md with .md.html
+echo "[INFO] Copying workshop files"
+
+rm -f ${S2I_BUILD_ROOT}/all.md
+#for i in `find ${MASTER_ROOT} -name "*.md"`
+for i in `cat ${CODE_ROOT}/index.md | awk '{match($0,/\((.*\.md)\)/)} {print substr($0,RSTART+1,RLENGTH-2)}'`
+do
+  # Get filename
+#  __filename=$(basename ${i})
+  __filename=${i}
+#  echo "[INFO] Verifying ${__filename}"
+  # If the file is in the index, we copy it
+#  if grep ${__filename} ${CODE_ROOT}/index.md > /dev/null 2>&1; then
+   [ ! -e ${MASTER_ROOT}/${__filename} ] && echo "[ERROR] This file does not exist in openshift-workshops-master" && exit 1
+     echo "[INFO] Processing ${__filename}"
+     # Read contents of the file as a variable
+     process ${__filename} ${MASTER_ROOT} ${S2I_BUILD_ROOT}
+     cat ${MASTER_ROOT}/${__filename} >> ${S2I_BUILD_ROOT}/all.md
+     echo "[INFO] ${__filename} done"
+#  else
+#     echo "[INFO] Skipping ${__filename}"
+#  fi
+done
+
+echo "" >> ${CODE_ROOT}/index.md
+echo "" >> ${CODE_ROOT}/index.md
+echo "**[Complete workshop](all.md)**" >> ${CODE_ROOT}/index.md
+
+process all.md ${S2I_BUILD_ROOT} ${S2I_BUILD_ROOT}
+
+echo "[INFO] Processing index.md"
+process "index.md" ${CODE_ROOT} ${S2I_BUILD_ROOT}
+echo "[INFO] index.md done"
+
+# cat /tmp/src/index.md | awk '{match($0,/\((.*\.md)\)/)} {print substr($0,RSTART+1,RLENGTH-2)}'
+
+# Processing links
+echo "[INFO] Processing links"
+for _file in `find ${S2I_BUILD_ROOT} -name "*.md.html"`
+do
+   sed -i -e 's/\.md/\.md\.html/' ${_file}
+done
+
+echo "[INFO] Build finish"
