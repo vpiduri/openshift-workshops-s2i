@@ -75,7 +75,7 @@ echo "[INFO] Copying workshop files"
 
 rm -f ${S2I_BUILD_ROOT}/all.md
 #for i in `find ${MASTER_ROOT} -name "*.md"`
-for i in `cat ${CODE_ROOT}/index.md | awk '{match($0,/\((.*\.md)\)/)} {print substr($0,RSTART+1,RLENGTH-2)}'`
+for i in `cat ${CODE_ROOT}/index.md | awk '{match($0,/\]\((.*\.md)\)/)} {print substr($0,RSTART+2,RLENGTH-3)}'`
 do
   # Get filename
 #  __filename=$(basename ${i})
@@ -83,9 +83,11 @@ do
 #  echo "[INFO] Verifying ${__filename}"
   # If the file is in the index, we copy it
 #  if grep ${__filename} ${CODE_ROOT}/index.md > /dev/null 2>&1; then
-   [ ! -e ${MASTER_ROOT}/${__filename} ] && echo "[ERROR] This file does not exist in openshift-workshops-master" && exit 1
+   ls ${MASTER_ROOT}/${__filename}
+   [ ! -e ${MASTER_ROOT}/${__filename} ] && echo "[ERROR] This file (${__filename} does not exist in openshift-workshops-master" && exit 1
      echo "[INFO] Processing ${__filename}"
      # Read contents of the file as a variable
+     echo "process ${__filename} ${MASTER_ROOT} ${S2I_BUILD_ROOT}"
      process ${__filename} ${MASTER_ROOT} ${S2I_BUILD_ROOT}
      cat ${MASTER_ROOT}/${__filename} >> ${S2I_BUILD_ROOT}/all.md
      echo "[INFO] ${__filename} done"

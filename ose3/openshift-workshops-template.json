@@ -127,8 +127,8 @@
           "type": "Source",
           "sourceStrategy": {
             "from": {
-              "kind": "ImageStreamTag",
-              "name": "openshift-workshops-s2i:latest"
+              "kind": "DockerImage",
+              "name": "jorgemoralespou/openshift-workshops-s2i:latest"
             },
             "env": [
               {
