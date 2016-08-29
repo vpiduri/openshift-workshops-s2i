@@ -83,7 +83,6 @@ do
 #  echo "[INFO] Verifying ${__filename}"
   # If the file is in the index, we copy it
 #  if grep ${__filename} ${CODE_ROOT}/index.md > /dev/null 2>&1; then
-   ls ${MASTER_ROOT}/${__filename}
    [ ! -e ${MASTER_ROOT}/${__filename} ] && echo "[ERROR] This file (${__filename} does not exist in openshift-workshops-master" && exit 1
      echo "[INFO] Processing ${__filename}"
      # Read contents of the file as a variable
